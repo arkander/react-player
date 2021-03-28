@@ -4,7 +4,7 @@ import './styles/app.scss';
 import Player from './components/Player';
 import Song from './components/Song';
 import Library from './components/Library';
-import data from './utils';
+import data from './data';
 import Nav from "./components/Nav";
 
 
@@ -15,18 +15,28 @@ function App() {
   const[isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
 
-  const [songInfo, setSongInfo] = useState({currentTime:0, duration:0});
+  const [songInfo, setSongInfo] = useState({currentTime:0, duration:0, animationPercentage:0});
 
   const [libraryStatus, setLibraryStatus] = useState(false);
 
   const timeUpdateHandler = (e)=>{
     const currentTime = e.target.currentTime;
     const duration = e.target.duration || 0;
-    setSongInfo({...songInfo, currentTime, duration});
+    const roundedCurrentTime = Math.round(currentTime);
+    const roundedDuration = Math.round(duration);
+    const animationPercentage = Math.round((roundedCurrentTime / roundedDuration) * 100 );
+    setSongInfo({...songInfo, currentTime, duration, animationPercentage});
+  }
+  const songEndHandler = async ()=>{
+    let currentIndex = songs.findIndex((song)=>song.id === currentSong.id);
+    await setCurrentSong(songs[(currentIndex + 1) % songs.length] );
+    if(isPlaying){
+      audioRef.current.play();
+    }
   }
 
   return (
-    <div className="App">
+    <div className={`App ${libraryStatus ? 'library-active' : '' }`}>
       <Nav libraryStatus = {libraryStatus} setLibraryStatus={setLibraryStatus} />
       <Song currentSong={currentSong}/>
 
@@ -37,6 +47,7 @@ function App() {
               setSongInfo={setSongInfo}
               songInfo={songInfo}
               songs={songs}
+              setSongs = {setSongs}
               setIsPlaying={setIsPlaying}/>
 
       <Library  songs={songs}
@@ -50,6 +61,7 @@ function App() {
       <audio src={currentSong.audio} 
                ref={audioRef} 
                onTimeUpdate={timeUpdateHandler}
+               onEnded={songEndHandler}
                onLoadedMetadata={timeUpdateHandler}></audio>
     </div>
   );
